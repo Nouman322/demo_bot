@@ -6,7 +6,6 @@ from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
-# os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
 os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
 
 openai = OpenAI()
@@ -112,15 +111,63 @@ if 'questions' not in st.session_state:
     st.session_state.questions = [
         "What's motivating your job or service search right now?",
         "Would you describe your current work or mission as a calling?",
-        "How would you articulate your life mission in a few words?",
-        "How significant is your faith in influencing your career choices?",
+        "In a few words, how would you describe your calling or life mission?",
+        "How important is your faith in shaping the work you want to do?",
         "Do you prefer working with organizations that share your faith or values?",
         "What is your current city and country of residence?",
         "What is your nationality?",
-        "Are you open to relocating? If yes, where?",
-        "What types of work are you interested in?",
+        "Are you open to relocating?",
+        "If yes or maybe, where are you open to relocating?",
+        "What type of work are you open to?",
         "What work environment do you prefer?"
     ]
+
+if 'question_options' not in st.session_state:
+    st.session_state.question_options = {
+        "What's motivating your job or service search right now?": [
+            "want to live out my faith through my work",
+            "I'm looking for meaningful employment",
+            "I'm entering a new season of life",
+            "I need income that aligns with my values",
+            "Other"
+        ],
+        "Would you describe your current work or mission as a calling?": [
+            "Yes, deeply",
+            "Somewhat",
+            "Still exploring it",
+            "Not really"
+        ],
+        "How important is your faith in shaping the work you want to do?": [
+            "Central to everything I do",
+            "Important but not everything",
+            "I'm open to faith-aligned work",
+            "Prefer not to say"
+        ],
+        "Do you prefer working with organizations that share your faith or values?": [
+            "Yes",
+            "It's a plus, but not required",
+            "No preference"
+        ],
+        "Are you open to relocating?": [
+            "Yes",
+            "Maybe, for the right opportunity",
+            "No"
+        ],
+        "What type of work are you open to?": [
+            "Full-time",
+            "Part-time",
+            "Freelance / Contract",
+            "Volunteer",
+            "Temporary / Project-based",
+            "Internship"
+        ],
+        "What work environment do you prefer?": [
+            "Remote",
+            "In-person",
+            "Hybrid",
+            "No preference"
+        ]
+    }
 
 if 'chat_history' not in st.session_state:
     st.session_state.chat_history = []
@@ -160,71 +207,144 @@ if st.session_state.conversation_active:
             with st.chat_message("assistant"):
                 st.write(st.session_state.current_question)
         
-        # Get user input
-        if prompt := st.chat_input("Type your response here..."):
-            if prompt.lower() == "quit":
-                st.session_state.conversation_active = False
-                with st.chat_message("assistant"):
-                    st.success("Great, let me do a little science and show the Impacts that match your skills! 🚀")
-                st.rerun()
+        # Check if we have predefined options for this question
+        if st.session_state.current_question in st.session_state.question_options:
+            options = st.session_state.question_options[st.session_state.current_question]
             
-            validation = check_response(st.session_state.current_question, prompt).lower()
+            # Use radio buttons for selection
+            selected_option = st.radio(
+                "Select an option:",
+                options,
+                key=f"radio_{st.session_state.current_question}"
+            )
             
-            if "valid" in validation or "skip" in validation:
-                # Add to chat history
-                st.session_state.chat_history.extend([
-                    AIMessage(content=st.session_state.current_question),
-                    HumanMessage(content=prompt)
-                ])
+            # Handle "Other" option
+            if selected_option == "Other":
+                custom_response = st.text_input("Please specify:")
+                if custom_response:
+                    response = f"Other: {custom_response}"
+                else:
+                    response = None
+            else:
+                response = selected_option
+            
+            # Submit button for radio selections
+            if st.button("Submit") and response:
+                validation = "valid"
+                if st.session_state.current_question not in st.session_state.question_options.keys():
+                    validation = check_response(st.session_state.current_question, response).lower()
+
+                # validation = check_response(st.session_state.current_question, response).lower()
                 
-                # Remove asked question
-                remove_asked_question(st.session_state.chat_history, st.session_state.questions)
-                
-                # Generate next question if available
-                if st.session_state.questions and len(st.session_state.chat_history) < 10:
-                    next_question = recommend_chat(
-                        prompt,
-                        st.session_state.chat_history,
-                        st.session_state.questions
-                    )
+                if "valid" in validation or "skip" in validation:
+                    # Add to chat history
+                    st.session_state.chat_history.extend([
+                        AIMessage(content=st.session_state.current_question),
+                        HumanMessage(content=response)
+                    ])
                     
-                    # Update current question and remove from list if it matches
-                    st.session_state.current_question = next_question
-                    for q in st.session_state.questions[:]:
-                        if q.lower() in next_question.lower():
-                            st.session_state.questions.remove(q)
-                            break
+                    # Remove asked question
+                    remove_asked_question(st.session_state.chat_history, st.session_state.questions)
                     
+                    # Generate next question if available
+                    if st.session_state.questions and len(st.session_state.chat_history) <= 10:
+                        next_question = recommend_chat(
+                            response,
+                            st.session_state.chat_history,
+                            st.session_state.questions
+                        )
+                        
+                        # Update current question and remove from list if it matches
+                        st.session_state.current_question = next_question
+                        for q in st.session_state.questions[:]:
+                            if q.lower() in next_question.lower():
+                                st.session_state.questions.remove(q)
+                                break
+                        
+                        st.session_state.waiting_for_response = True
+                        st.rerun()
+                    else:
+                        # Display final exchange first
+                        with st.chat_message("assistant"):
+                            st.write(st.session_state.current_question)
+                        with st.chat_message("user"):
+                            st.write(response)
+                        
+                        # Then show success message
+                        with st.chat_message("assistant"):
+                            st.success("Great, let me do a little science and show the Impacts that match your skills! 🚀")
+                        
+                        # Update state and prevent further questions
+                        st.session_state.conversation_active = False
+                        st.session_state.current_question = None
+                        st.session_state.waiting_for_response = False
+                        st.rerun()
+                else:
+                    with st.chat_message("assistant"):
+                        st.warning("Please provide a more specific answer to the question")
                     st.session_state.waiting_for_response = True
                     st.rerun()
-                else:
-
-                     # Display final exchange first
-                    with st.chat_message("assistant"):
-                        st.write(st.session_state.current_question)
-                    with st.chat_message("user"):
-                        st.write(prompt)
-                    
-                    # Then show success message
+        
+        else:
+            # For questions without predefined options, use text input
+            if prompt := st.chat_input("Type your response here..."):
+                if prompt.lower() == "quit" or len(st.session_state.chat_history)>=10:
+                    st.session_state.conversation_active = False
                     with st.chat_message("assistant"):
                         st.success("Great, let me do a little science and show the Impacts that match your skills! 🚀")
-                    
-                    # Update state and prevent further questions
-                    st.session_state.conversation_active = False
-                    st.session_state.current_question = None
-                    st.session_state.waiting_for_response = False
                     st.rerun()
-                                
-                    # st.session_state.conversation_active = False
-                 
-                    # with st.chat_message("assistant"):
+                validation = "valid"
+                if st.session_state.current_question not in st.session_state.question_options.keys():
+                    validation = check_response(st.session_state.current_question, prompt).lower()
+                
+                if "valid" in validation or "skip" in validation:
+                    # Add to chat history
+                    st.session_state.chat_history.extend([
+                        AIMessage(content=st.session_state.current_question),
+                        HumanMessage(content=prompt)
+                    ])
+                    
+                    # Remove asked question
+                    remove_asked_question(st.session_state.chat_history, st.session_state.questions)
+                    
+                    # Generate next question if available
+                    if st.session_state.questions and len(st.session_state.chat_history) < 20:
+                        next_question = recommend_chat(
+                            prompt,
+                            st.session_state.chat_history,
+                            st.session_state.questions
+                        )
                         
-                    #     st.success("Great, let me do a little science and show the Impacts that match your skills! 🚀")
-            else:
-                with st.chat_message("assistant"):
-                    st.warning("Please provide a more specific answer to the question or type 'skip' to move on")
-                st.session_state.waiting_for_response = True
-                st.rerun()
+                        # Update current question and remove from list if it matches
+                        st.session_state.current_question = next_question
+                        for q in st.session_state.questions[:]:
+                            if q.lower() in next_question.lower():
+                                st.session_state.questions.remove(q)
+                                break
+                        
+                        st.session_state.waiting_for_response = True
+                        st.rerun()
+                    else:
+                        # Display final exchange first
+                        with st.chat_message("assistant"):
+                            st.write(st.session_state.current_question)
+                        with st.chat_message("user"):
+                            st.write(prompt)
+                        
+                        # Then show success message
+                        with st.chat_message("assistant"):
+                            st.success("Great, let me do a little science and show the Impacts that match your skills! 🚀")
+                        
+                        # Update state and prevent further questions
+                        st.session_state.conversation_active = False
+                        st.session_state.current_question = None
+                        st.session_state.waiting_for_response = False
+                        st.rerun()
+                else:
+                    with st.chat_message("assistant"):
+                        st.warning("Please provide a more specific answer to the question or type 'skip' to move on")
+                    st.session_state.waiting_for_response = True
+                    st.rerun()
 else:
     with st.chat_message("assistant"):
         st.success("Great, let me do a little science and show the Impacts that match your skills! 🚀")
