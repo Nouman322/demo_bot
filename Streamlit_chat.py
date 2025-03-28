@@ -231,8 +231,8 @@ if st.session_state.conversation_active:
             # Submit button for radio selections
             if st.button("Submit") and response:
                 validation = "valid"
-                if st.session_state.current_question not in st.session_state.question_options.keys():
-                    validation = check_response(st.session_state.current_question, response).lower()
+                # if st.session_state.current_question not in st.session_state.question_options.keys():
+                #     validation = check_response(st.session_state.current_question, response).lower()
 
                 # validation = check_response(st.session_state.current_question, response).lower()
                 
@@ -247,7 +247,7 @@ if st.session_state.conversation_active:
                     remove_asked_question(st.session_state.chat_history, st.session_state.questions)
                     
                     # Generate next question if available
-                    if st.session_state.questions and len(st.session_state.chat_history) <= 10:
+                    if st.session_state.questions and len(st.session_state.chat_history) < 10:
                         next_question = recommend_chat(
                             response,
                             st.session_state.chat_history,
@@ -294,8 +294,8 @@ if st.session_state.conversation_active:
                         st.success("Great, let me do a little science and show the Impacts that match your skills! 🚀")
                     st.rerun()
                 validation = "valid"
-                if st.session_state.current_question not in st.session_state.question_options.keys():
-                    validation = check_response(st.session_state.current_question, prompt).lower()
+                # if st.session_state.current_question not in st.session_state.question_options.keys():
+                #     validation = check_response(st.session_state.current_question, prompt).lower()
                 
                 if "valid" in validation or "skip" in validation:
                     # Add to chat history
