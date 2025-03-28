@@ -193,6 +193,8 @@ for msg in st.session_state.chat_history:
         with st.chat_message("user"):
             st.write(msg.content)
 
+# ... (previous imports and setup remain the same until conversation logic)
+
 # Conversation logic
 if st.session_state.conversation_active:
     if not st.session_state.current_question and st.session_state.questions:
@@ -231,23 +233,36 @@ if st.session_state.conversation_active:
             # Submit button for radio selections
             if st.button("Submit") and response:
                 validation = "valid"
-                # if st.session_state.current_question not in st.session_state.question_options.keys():
-                #     validation = check_response(st.session_state.current_question, response).lower()
-
-                # validation = check_response(st.session_state.current_question, response).lower()
                 
                 if "valid" in validation or "skip" in validation:
-                    # Add to chat history
+                    # Add to chat history FIRST
                     st.session_state.chat_history.extend([
                         AIMessage(content=st.session_state.current_question),
                         HumanMessage(content=response)
                     ])
                     
+                    # Display the exchange immediately
+                    with st.chat_message("assistant"):
+                        st.write(st.session_state.current_question)
+                    with st.chat_message("user"):
+                        st.write(response)
+                    
                     # Remove asked question
                     remove_asked_question(st.session_state.chat_history, st.session_state.questions)
                     
-                    # Generate next question if available
-                    if st.session_state.questions and len(st.session_state.chat_history) < 10:
+                    # Check if this was the last question
+                    if not st.session_state.questions or len(st.session_state.chat_history) >= 10:
+                        # Show success message after displaying the last exchange
+                        with st.chat_message("assistant"):
+                            st.success("Great, let me do a little science and show the Impacts that match your skills! 🚀")
+                        
+                        # Update state and prevent further questions
+                        st.session_state.conversation_active = False
+                        st.session_state.current_question = None
+                        st.session_state.waiting_for_response = False
+                        st.rerun()
+                    else:
+                        # Generate next question if available
                         next_question = recommend_chat(
                             response,
                             st.session_state.chat_history,
@@ -263,22 +278,6 @@ if st.session_state.conversation_active:
                         
                         st.session_state.waiting_for_response = True
                         st.rerun()
-                    else:
-                        # Display final exchange first
-                        with st.chat_message("assistant"):
-                            st.write(st.session_state.current_question)
-                        with st.chat_message("user"):
-                            st.write(response)
-                        
-                        # Then show success message
-                        with st.chat_message("assistant"):
-                            st.success("Great, let me do a little science and show the Impacts that match your skills! 🚀")
-                        
-                        # Update state and prevent further questions
-                        st.session_state.conversation_active = False
-                        st.session_state.current_question = None
-                        st.session_state.waiting_for_response = False
-                        st.rerun()
                 else:
                     with st.chat_message("assistant"):
                         st.warning("Please provide a more specific answer to the question")
@@ -288,27 +287,43 @@ if st.session_state.conversation_active:
         else:
             # For questions without predefined options, use text input
             if prompt := st.chat_input("Type your response here..."):
-                if prompt.lower() == "quit" or len(st.session_state.chat_history)>=10:
+                if prompt.lower() == "quit":
                     st.session_state.conversation_active = False
                     with st.chat_message("assistant"):
                         st.success("Great, let me do a little science and show the Impacts that match your skills! 🚀")
                     st.rerun()
+                
                 validation = "valid"
-                # if st.session_state.current_question not in st.session_state.question_options.keys():
-                #     validation = check_response(st.session_state.current_question, prompt).lower()
                 
                 if "valid" in validation or "skip" in validation:
-                    # Add to chat history
+                    # Add to chat history FIRST
                     st.session_state.chat_history.extend([
                         AIMessage(content=st.session_state.current_question),
                         HumanMessage(content=prompt)
                     ])
                     
+                    # Display the exchange immediately
+                    with st.chat_message("assistant"):
+                        st.write(st.session_state.current_question)
+                    with st.chat_message("user"):
+                        st.write(prompt)
+                    
                     # Remove asked question
                     remove_asked_question(st.session_state.chat_history, st.session_state.questions)
                     
-                    # Generate next question if available
-                    if st.session_state.questions and len(st.session_state.chat_history) < 20:
+                    # Check if this was the last question
+                    if not st.session_state.questions or len(st.session_state.chat_history) >= 10:
+                        # Show success message after displaying the last exchange
+                        with st.chat_message("assistant"):
+                            st.success("Great, let me do a little science and show the Impacts that match your skills! 🚀")
+                        
+                        # Update state and prevent further questions
+                        st.session_state.conversation_active = False
+                        st.session_state.current_question = None
+                        st.session_state.waiting_for_response = False
+                        st.rerun()
+                    else:
+                        # Generate next question if available
                         next_question = recommend_chat(
                             prompt,
                             st.session_state.chat_history,
@@ -323,22 +338,6 @@ if st.session_state.conversation_active:
                                 break
                         
                         st.session_state.waiting_for_response = True
-                        st.rerun()
-                    else:
-                        # Display final exchange first
-                        with st.chat_message("assistant"):
-                            st.write(st.session_state.current_question)
-                        with st.chat_message("user"):
-                            st.write(prompt)
-                        
-                        # Then show success message
-                        with st.chat_message("assistant"):
-                            st.success("Great, let me do a little science and show the Impacts that match your skills! 🚀")
-                        
-                        # Update state and prevent further questions
-                        st.session_state.conversation_active = False
-                        st.session_state.current_question = None
-                        st.session_state.waiting_for_response = False
                         st.rerun()
                 else:
                     with st.chat_message("assistant"):
