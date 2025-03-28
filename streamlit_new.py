@@ -6,9 +6,7 @@ from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
-# os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
-os.environ["OPENAI_API_KEY"] = st.secrets("OPENAI_API_KEY")
-
+os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
 openai = OpenAI()
 
 def generate_response_gpt(prompt, question=""):
@@ -198,28 +196,9 @@ if st.session_state.conversation_active:
                     st.session_state.waiting_for_response = True
                     st.rerun()
                 else:
-
-                     # Display final exchange first
-                    with st.chat_message("assistant"):
-                        st.write(st.session_state.current_question)
-                    with st.chat_message("user"):
-                        st.write(prompt)
-                    
-                    # Then show success message
-                    with st.chat_message("assistant"):
-                        st.success("Great, let me do a little science and show the Impacts that match your skills! 🚀")
-                    
-                    # Update state and prevent further questions
                     st.session_state.conversation_active = False
-                    st.session_state.current_question = None
-                    st.session_state.waiting_for_response = False
-                    st.rerun()
-                                
-                    # st.session_state.conversation_active = False
-                 
-                    # with st.chat_message("assistant"):
-                        
-                    #     st.success("Great, let me do a little science and show the Impacts that match your skills! 🚀")
+                    with st.chat_message("assistant"):
+                        st.success("Conversation completed! Here are your results...")
             else:
                 with st.chat_message("assistant"):
                     st.warning("Please provide a more specific answer to the question or type 'skip' to move on")
@@ -227,4 +206,4 @@ if st.session_state.conversation_active:
                 st.rerun()
 else:
     with st.chat_message("assistant"):
-        st.success("Great, let me do a little science and show the Impacts that match your skills! 🚀")
+        st.success("Thank you for completing the conversation!")
