@@ -221,7 +221,7 @@ class Model:
                "Hi there! I’m your VoGo assistant. Let’s take 3–4 minutes to understand your purpose, experience, and preferences so we can connect you with meaningful opportunities."
                
                Introduction should be changed a bit not used as it is..
-               
+
             - Avoid using section titles or headings like "Location & Work Modality" or "Purpose & Calling" etc. in your response.
 
             - Ask direct, concise questions without explaining the reason behind them or what will be done with the information.
@@ -597,7 +597,7 @@ def img_to_base64(image_path, size=(100, 100)):
         return ""
 
 # Load your company logo (replace with your actual image path)
-logo_path = "logo.webp"  # Update this path
+logo_path = "V_favicon_Black.png"  # Update this path
 logo_base64 = img_to_base64(logo_path, size=(150, 150))  # Increased avatar size
 
 # Custom CSS for larger font and avatar styling
@@ -611,12 +611,12 @@ st.markdown(
         
         /* Avatar styling */
         .stChatMessage img[alt="company-logo"] {{
-            border-radius: 100%;
+            border-radius: 70%;
             object-fit: cover;
-            width: 150px !important;
-            height: 150px !important;
-            min-width: 150px !important;
-            min-height: 150px !important;
+            width: 50px !important;
+            height: 50px !important;
+            min-width: 50px !important;
+            min-height: 50px !important;
         }}
         
         /* Input box font size */
@@ -659,6 +659,9 @@ if 'session_state' not in st.session_state:
                      if not any(item.startswith(phrase) for phrase in phrases_to_remove)]
     
     questions_list = [item for item in questions_list if item.strip() != ""]
+
+    questions_list = [re.sub(r'^\d+\.\s*', '', q) for q in questions_list]
+
 
     print("questions_list length is: ", len(questions_list))    
     print("questions_list is: ", questions_list)
