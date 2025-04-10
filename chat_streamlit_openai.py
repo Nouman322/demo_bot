@@ -216,6 +216,12 @@ class Model:
 
             - Generate 8 different question each from 1 category stated above.
 
+            - In first question add the introduction of the chatbot as well here is the introduction of the chatbot. 
+               
+               "Hi there! I’m your VoGo assistant. Let’s take 3–4 minutes to understand your purpose, experience, and preferences so we can connect you with meaningful opportunities."
+               
+               Introduction should be changed a bit not used as it is..
+               
             - Avoid using section titles or headings like "Location & Work Modality" or "Purpose & Calling" etc. in your response.
 
             - Ask direct, concise questions without explaining the reason behind them or what will be done with the information.
