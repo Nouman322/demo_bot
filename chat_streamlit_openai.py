@@ -81,6 +81,7 @@ class Model:
 
             ### Tone & Style
             - Be concise and conversational.
+            - Warm, purpose-driven, supportive, conversational — but clear and efficient.
             - Use a light empathetic tone (e.g., "Understood", "Got it", "Makes sense").
             - Aim for minimal yet human acknowledgment (1–5 words).
 
@@ -115,13 +116,13 @@ class Model:
         # "academic_position", "teaching", "previous_positions" , "testimony", "presentation",
         # "education","expertise_area_specialization", "services", "current_position", "services_ratings", "skills_ratings","management_level", "location", "availability", "open_to_relocation", "relocation_city" ,"register_as_firm", "skills"
         prompt = ChatPromptTemplate.from_messages(
-                [
-                    (
-                        "system",
-                        """
-            You are a conversational bot designed to interact directly with candidates in a human-like, engaging manner. Your goal is to gather detailed and comprehensive information from the candidate across multiple key areas, including both objective facts and subjective insights. This data will later be used for a matchmaking algorithm.
+                        [
+                            (
+                                "system",
+                                """
+                You are a conversational bot designed to interact directly with candidates in a human-like, engaging manner. Your goal is to gather detailed and comprehensive information from the candidate across multiple key areas, including both objective facts and subjective insights. This data will later be used for a matchmaking algorithm.
 
-            **Core Objectives:**
+                    **Core Objectives:**
             - Gather detailed, truthful, and relevant information from the candidate.
             - Ask engaging, standalone questions—each must make sense without needing prior answers.
             - Adapt to context: Ask only what’s relevant based on information already provided.
@@ -213,6 +214,8 @@ class Model:
 
             - Ensure every question is easy to understand and free of jargon.
 
+            - Generate 8 different question each from 1 category stated above.
+
             - Avoid using section titles or headings like "Location & Work Modality" or "Purpose & Calling" etc. in your response.
 
             - Ask direct, concise questions without explaining the reason behind them or what will be done with the information.
@@ -221,11 +224,10 @@ class Model:
             - When listing examples or choices, weave them naturally into the question.
             For example: “Which type of role are you open to —full-time, part-time, contract, volunteer, project-based, or internship?”
 
-                        """,
-                    ),
-                ]
-            )
-
+                    """
+                            )
+                        ]
+                    )
         # info = get_info_by_name(email)
         # question = f"""{info}"""
         gt = self.generate_response_gpt(prompt)
@@ -242,7 +244,8 @@ class Model:
                  and provide assistance in case user's answer is irrelevant or user want to stop the process, 
                  there will be a context for you that contains previous questions and answers to the user.
                  
-                 
+                 **Tone:** 
+                - Warm, purpose-driven, supportive, conversational — but clear and efficient.
                  These are the fields : 
                  ### **Categories and Question Options**
 
@@ -353,7 +356,7 @@ def continue_chat(session_state, session_key, message):
 
     if current_question_index >= len(questions):
         return {
-            'message': 'All questions have been answered. Thank you!',
+            'message': 'You’re all set! We’ll match you with Growers aligned with your strengths,mission, and calling.',
             'completed': True
         }
 
@@ -383,7 +386,7 @@ def continue_chat(session_state, session_key, message):
         current_question_index += 1
         if len(questions) <= current_question_index:
             return {
-                'message': "All questions have been answered. Thank you for sharing your information!",
+                'message': "You’re all set! We’ll match you with Growers aligned with your strengths,mission, and calling.",
                 'questions_remaining': len(questions) - current_question_index,
                 'completed': True
             }
@@ -444,7 +447,7 @@ def continue_chat(session_state, session_key, message):
         })
 
         if current_question_index >= len(questions):
-            next_step = "All questions have been answered. Thank you for sharing your information!"
+            next_step = "You’re all set! We’ll match you with Growers aligned with your strengths,mission, and calling."
         else:
             next_step = questions[current_question_index]
 
@@ -629,9 +632,30 @@ st.markdown(
 if 'session_state' not in st.session_state:
     # Get questions from the model
     questions = model.get_questions()
+    questions = questions.replace("**", "").replace("---", "")
+    print("questions are: ", questions)
     data = questions.split("\n")
     data = [item for item in data if item.strip() != ""]
     questions_list = extract_questions(data)
+    phrases_to_remove = [
+        'Purpose & Calling',
+        'Faith Alignment',
+        'Location & Work Modality',
+        'Language Proficiency',
+        'Visa & Relocation Support',
+        'Compensation',
+        'Experience, Skills & Strengths',
+        'Availability & Final Snapshot'
+    ]
+    questions_list = [question.replace('**', '').replace("---","") for question in questions_list]
+    # Filter the list
+    questions_list = [item for item in questions_list 
+                     if not any(item.startswith(phrase) for phrase in phrases_to_remove)]
+    
+    questions_list = [item for item in questions_list if item.strip() != ""]
+
+    print("questions_list length is: ", len(questions_list))    
+    print("questions_list is: ", questions_list)
     
     st.session_state.session_state = {
         'questions': questions_list,
@@ -650,25 +674,44 @@ with st.chat_message("assistant", avatar=f"data:image/png;base64,{logo_base64}")
     st.markdown(f"<div style='font-size:24px'>{st.session_state.current_question}</div>", unsafe_allow_html=True)
 
 # Get user input with larger font
-if prompt := st.chat_input("Your answer"):
-    # Clear previous content
+if not st.session_state.session_state.get('completed', False):
+    if prompt := st.chat_input("Your answer"):
+        # Clear previous content
+        st.empty()
+        
+        # Get chatbot response
+        response = continue_chat(
+            st.session_state.session_state,
+            st.session_state.session_key,
+            prompt
+        )
+        
+        # Update session state with new question
+        st.session_state.session_state = response.get('session_state', st.session_state.session_state)
+        
+        # Check if conversation is complete
+        if response.get('completed', False):
+            st.session_state.session_state['completed'] = True  # Mark as completed
+            # Clear any previous messages
+            st.empty()
+            # Display final success message with balloons
+            with st.chat_message("assistant", avatar=f"data:image/png;base64,{logo_base64}"):
+                st.markdown(
+                    f"<div style='color:green; font-size:24px'>{response['message']}</div>", 
+                    unsafe_allow_html=True
+                )
+                st.balloons()
+            # Conversation is completed - show only the final message
+            
+        else:
+            # Update current question only if not completed
+            st.session_state.current_question = response['message']
+            st.rerun()  # Show next question
+else:
+    # Conversation is completed - show only the final message
     st.empty()
-    
-    # Get chatbot response
-    response = continue_chat(
-        st.session_state.session_state,
-        st.session_state.session_key,
-        prompt
-    )
-    
-    # Update session state with new question
-    st.session_state.session_state = st.session_state.session_state
-    st.session_state.current_question = response['message']
-    
-    # Rerun to show new question with avatar
-    st.rerun()
-    
-    # Check if conversation is complete
-    if response.get('completed', False):
-        st.success("Thank you for completing all the questions!")
-        st.balloons()
+    with st.chat_message("assistant", avatar=f"data:image/png;base64,{logo_base64}"):
+        st.markdown(
+            f"<div style='color:green; font-size:24px'>{st.session_state.session_state.get('final_message', 'Conversation Already completed!')}</div>", 
+            unsafe_allow_html=True
+        )
